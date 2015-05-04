@@ -23,6 +23,7 @@
  */
 package org.opentdc.users.file;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,12 +33,13 @@ import java.util.logging.Logger;
 
 import javax.servlet.ServletContext;
 
+import org.opentdc.file.AbstractFileServiceProvider;
 import org.opentdc.service.exception.DuplicateException;
 import org.opentdc.service.exception.NotFoundException;
 import org.opentdc.users.ServiceProvider;
 import org.opentdc.users.UserModel;
 
-public class FileServiceProvider implements ServiceProvider {
+public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> implements ServiceProvider {
 
 	private static Map<String, UserModel> data = new HashMap<String, UserModel>();
 	private static final Logger logger = Logger.getLogger(FileServiceProvider.class.getName());
@@ -45,7 +47,15 @@ public class FileServiceProvider implements ServiceProvider {
 	public FileServiceProvider(
 		ServletContext context, 
 		String prefix
-	) {
+	) throws IOException {
+		super(context, prefix);
+		if (data == null) {
+			data = new HashMap<String, UserModel>();
+			List<UserModel> _users = importJson();
+			for (UserModel _user : _users) {
+				data.put(_user.getId(), _user);
+			}
+		}
 	}
 	
 	private void setNewID(UserModel dataObj) {
