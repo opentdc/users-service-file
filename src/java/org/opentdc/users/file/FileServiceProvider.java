@@ -36,12 +36,14 @@ import javax.servlet.ServletContext;
 import org.opentdc.file.AbstractFileServiceProvider;
 import org.opentdc.service.exception.DuplicateException;
 import org.opentdc.service.exception.NotFoundException;
+import org.opentdc.service.exception.ValidationException;
 import org.opentdc.users.ServiceProvider;
 import org.opentdc.users.UserModel;
+import org.opentdc.util.PrettyPrinter;
 
 public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> implements ServiceProvider {
 
-	private static Map<String, UserModel> data = new HashMap<String, UserModel>();
+	private static Map<String, UserModel> index = null;
 	private static final Logger logger = Logger.getLogger(FileServiceProvider.class.getName());
 
 	public FileServiceProvider(
@@ -49,48 +51,16 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 		String prefix
 	) throws IOException {
 		super(context, prefix);
-		if (data == null) {
-			data = new HashMap<String, UserModel>();
+		if (index == null) {
+			index = new HashMap<String, UserModel>();
 			List<UserModel> _users = importJson();
 			for (UserModel _user : _users) {
-				data.put(_user.getId(), _user);
+				index.put(_user.getId(), _user);
 			}
+			logger.info(_users.size() + " Users imported.");
 		}
 	}
-	
-	private void setNewID(UserModel dataObj) {
-		String _id = UUID.randomUUID().toString();
-		dataObj.setId(_id);
-	}
-
-	private void storeData(UserModel dataObj) {
-		data.put(dataObj.getId(), dataObj);
-	}
-
-	private UserModel getData(String id) {
-		return data.get(id);
-	}
-
-	private List<UserModel> getData() {
-		return new ArrayList<UserModel>(data.values());
-	}
-
-	private int getDataSize() {
-		int _retVal = 0;
-		if (data != null) {
-			_retVal = data.size();
-		}
-		return _retVal;
-	}
-
-	private void removeData(String id) {
-		data.remove(id);
-	}
-
-	private void clearData() {
-		data.clear();
-	}
-	
+		
 	@Override
 	public List<UserModel> list(
 		String queryType,
@@ -98,34 +68,49 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 		long position,
 		long size
 	) {
-		List<UserModel> _list = getData();
-		logger.info("list() -> " + getDataSize() + " values");
-		return _list;
+		// Collections.sort(index, UserModel.UserComparator);
+		logger.info("list() -> " + index.size() + " values");
+		return new ArrayList<UserModel>(index.values());
 	}
 
 	@Override
 	public UserModel create(
 		UserModel user
-	) throws DuplicateException {
-		if (getData(user.getId()) != null) {
-			throw new DuplicateException();
+	) throws DuplicateException, ValidationException {
+		logger.info("create(" + PrettyPrinter.prettyPrintAsJSON(user) + ")");
+		String _id = user.getId();
+		if (_id == null || _id == "") {
+			_id = UUID.randomUUID().toString();
+		} else {
+			if (index.get(_id) != null) {
+				// object with same ID exists already
+				throw new DuplicateException("user <" + _id + "> exists already.");
+			}
+			else { 	// a new ID was set on the client; we do not allow this
+				throw new ValidationException("user <" + _id + 
+					"> contains an ID generated on the client. This is not allowed.");
+			}				
 		}
-		setNewID(user);
-		storeData(user);
+		user.setId(_id);
+		index.put(_id, user);
+		logger.info("create() -> " + PrettyPrinter.prettyPrintAsJSON(user));		
+		if (isPersistent) {
+			exportJson(index.values());
+		}
 		return user;
 	}
 
 	@Override
 	public UserModel read(
-		String id
-	) throws NotFoundException {
-		UserModel _dataObj = getData(id);
-		if (_dataObj == null) {
-			throw new NotFoundException();
+			String id) 
+		throws NotFoundException {
+		UserModel _user = index.get(id);
+		if (_user == null) {
+			throw new NotFoundException("no user with ID <" + id
+					+ "> was found.");
 		}
-		// response.setId(id);
-		logger.info("read(" + id + "): " + _dataObj);
-		return _dataObj;
+		logger.info("read(" + id + ") -> " + PrettyPrinter.prettyPrintAsJSON(_user));
+		return _user;
 	}
 
 	@Override
@@ -133,38 +118,32 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 		String id,
 		UserModel user
 	) throws NotFoundException {
-		if (getData(id) == null) {
-			throw new NotFoundException();
+		if (index.get(id) == null) {
+			throw new NotFoundException("no user with ID <" + id
+					+ "> was found.");
 		} else {
-			user.setId(id);
-			storeData(user);
+			index.put(user.getId(), user);
+			logger.info("update(" + PrettyPrinter.prettyPrintAsJSON(user) + ")");
+			if (isPersistent) {
+				exportJson(index.values());
+			}
 			return user;
 		}
 	}
 
 	@Override
 	public void delete(
-		String id
-	) throws NotFoundException {
-		UserModel user = getData(id);
+			String id) 
+		throws NotFoundException {
+		UserModel user = index.get(id);
 		if (user == null) {
-			throw new NotFoundException();
+			throw new NotFoundException("no user with ID <" + id
+					+ "> was found.");
 		}
-		removeData(id);
+		index.remove(id);
 		logger.info("delete(" + id + ")");		
+		if (isPersistent) {
+			exportJson(index.values());
+		}
 	}
-
-	@Override
-	public void deleteAll(
-	) {
-		clearData();
-		logger.info("all data deleted");		
-	}
-
-	@Override
-	public int count(
-	) {
-		return getDataSize();
-	}
-	
 }
