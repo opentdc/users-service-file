@@ -25,6 +25,7 @@ package org.opentdc.users.file;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,8 @@ import javax.servlet.ServletContext;
 
 import org.opentdc.file.AbstractFileServiceProvider;
 import org.opentdc.service.exception.DuplicateException;
+import org.opentdc.service.exception.InternalServerErrorException;
+import org.opentdc.service.exception.NotAllowedException;
 import org.opentdc.service.exception.NotFoundException;
 import org.opentdc.service.exception.ValidationException;
 import org.opentdc.users.ServiceProvider;
@@ -92,6 +95,11 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 			}				
 		}
 		user.setId(_id);
+		Date _date = new Date();
+		user.setCreatedAt(_date);
+		user.setCreatedBy("DUMMY_USER");
+		user.setModifiedAt(_date);
+		user.setModifiedBy("DUMMY_USER");
 		index.put(_id, user);
 		logger.info("create() -> " + PrettyPrinter.prettyPrintAsJSON(user));		
 		if (isPersistent) {
@@ -117,24 +125,37 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 	public UserModel update(
 		String id,
 		UserModel user
-	) throws NotFoundException {
-		if (index.get(id) == null) {
+	) throws NotFoundException, NotAllowedException
+	{
+		UserModel _um = index.get(id);
+		if (_um == null) {
 			throw new NotFoundException("no user with ID <" + id
 					+ "> was found.");
-		} else {
-			index.put(user.getId(), user);
-			logger.info("update(" + PrettyPrinter.prettyPrintAsJSON(user) + ")");
-			if (isPersistent) {
-				exportJson(index.values());
-			}
-			return user;
+		} 
+		if (! _um.getCreatedAt().equals(user.getCreatedAt())) {
+			throw new NotAllowedException("user <" + id + ">: it is not allowed to change createdAt on the client.");
 		}
+		if (! _um.getCreatedBy().equalsIgnoreCase(user.getCreatedBy())) {
+			throw new NotAllowedException("user <" + id + ">: it is not allowed to change createdBy on the client.");		
+		}
+		_um.setLoginId(user.getLoginId());
+		_um.setContactId(user.getContactId());
+		_um.setHashedPassword(user.getHashedPassword());
+		_um.setSalt(user.getSalt());
+		_um.setModifiedAt(new Date());
+		_um.setModifiedBy("DUMMY_USER");
+		index.put(id, _um);
+		logger.info("update(" + PrettyPrinter.prettyPrintAsJSON(_um) + ")");
+		if (isPersistent) {
+			exportJson(index.values());
+		}
+		return _um;
 	}
 
 	@Override
 	public void delete(
 			String id) 
-		throws NotFoundException {
+		throws NotFoundException, InternalServerErrorException {
 		UserModel user = index.get(id);
 		if (user == null) {
 			throw new NotFoundException("no user with ID <" + id
