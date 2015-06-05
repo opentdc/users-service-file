@@ -25,11 +25,12 @@ package org.opentdc.users.file;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletContext;
@@ -55,7 +56,7 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 	) throws IOException {
 		super(context, prefix);
 		if (index == null) {
-			index = new HashMap<String, UserModel>();
+			index = new ConcurrentHashMap<String, UserModel>();
 			List<UserModel> _users = importJson();
 			for (UserModel _user : _users) {
 				index.put(_user.getId(), _user);
@@ -66,14 +67,22 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 		
 	@Override
 	public List<UserModel> list(
-		String queryType,
 		String query,
+		String queryType,
 		long position,
 		long size
 	) {
-		// Collections.sort(index, UserModel.UserComparator);
-		logger.info("list() -> " + index.size() + " values");
-		return new ArrayList<UserModel>(index.values());
+		ArrayList<UserModel> _users = new ArrayList<UserModel>(index.values());
+		Collections.sort(_users, UserModel.UserComparator);
+		ArrayList<UserModel> _selection = new ArrayList<UserModel>();
+		for (int i = 0; i < _users.size(); i++) {
+			if (i >= position && i < (position + size)) {
+				_selection.add(_users.get(i));
+			}			
+		}
+		logger.info("list(<" + query + ">, <" + queryType + 
+				">, <" + position + ">, <" + size + ">) -> " + _selection.size() + " users.");
+		return _selection;
 	}
 
 	@Override
