@@ -38,7 +38,6 @@ import javax.servlet.ServletContext;
 import org.opentdc.file.AbstractFileServiceProvider;
 import org.opentdc.service.exception.DuplicateException;
 import org.opentdc.service.exception.InternalServerErrorException;
-import org.opentdc.service.exception.NotAllowedException;
 import org.opentdc.service.exception.NotFoundException;
 import org.opentdc.service.exception.ValidationException;
 import org.opentdc.users.ServiceProvider;
@@ -134,7 +133,7 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 	public UserModel update(
 		String id,
 		UserModel user
-	) throws NotFoundException, NotAllowedException
+	) throws NotFoundException, ValidationException
 	{
 		UserModel _um = index.get(id);
 		if (_um == null) {
@@ -142,10 +141,10 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 					+ "> was found.");
 		} 
 		if (! _um.getCreatedAt().equals(user.getCreatedAt())) {
-			throw new NotAllowedException("user <" + id + ">: it is not allowed to change createdAt on the client.");
+			throw new ValidationException("user <" + id + ">: it is not allowed to change createdAt on the client.");
 		}
 		if (! _um.getCreatedBy().equalsIgnoreCase(user.getCreatedBy())) {
-			throw new NotAllowedException("user <" + id + ">: it is not allowed to change createdBy on the client.");		
+			throw new ValidationException("user <" + id + ">: it is not allowed to change createdBy on the client.");		
 		}
 		_um.setLoginId(user.getLoginId());
 		_um.setContactId(user.getContactId());
