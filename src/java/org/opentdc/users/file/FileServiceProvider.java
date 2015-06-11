@@ -102,6 +102,22 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 					"> contains an ID generated on the client. This is not allowed.");
 			}				
 		}
+		if (user.getLoginId() == null || user.getLoginId().length() == 0) {
+			throw new ValidationException("user <" + user.getId() +
+					"> must have a valid loginId.");
+		}
+		if (user.getContactId() == null || user.getContactId().length() == 0) {
+			throw new ValidationException("user <" + user.getId() +
+					"> must have a valid contactId.");
+		}
+		if (user.getHashedPassword() == null || user.getHashedPassword().length() == 0) {
+			throw new ValidationException("user <" + user.getId() +
+					"> must have a valid hashedPassword.");
+		}
+		if (user.getSalt() == null || user.getSalt().length() == 0) {
+			throw new ValidationException("user <" + user.getId() +
+					"> must have a valid salt.");
+		}
 		user.setId(_id);
 		Date _date = new Date();
 		user.setCreatedAt(_date);
