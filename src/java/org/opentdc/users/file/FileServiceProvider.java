@@ -157,10 +157,12 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 					+ "> was found.");
 		} 
 		if (! _um.getCreatedAt().equals(user.getCreatedAt())) {
-			throw new ValidationException("user <" + id + ">: it is not allowed to change createdAt on the client.");
+			logger.warning("user <" + id + ">: ignoring createdAt value <" + user.getCreatedAt().toString() +
+					"> because it was set on the client.");
 		}
 		if (! _um.getCreatedBy().equalsIgnoreCase(user.getCreatedBy())) {
-			throw new ValidationException("user <" + id + ">: it is not allowed to change createdBy on the client.");		
+			logger.warning("user <" + id + ">: ignoring createdBy value <" + user.getCreatedBy() +
+					"> because it was set on the client.");		
 		}
 		_um.setLoginId(user.getLoginId());
 		_um.setContactId(user.getContactId());
