@@ -121,9 +121,9 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 		user.setId(_id);
 		Date _date = new Date();
 		user.setCreatedAt(_date);
-		user.setCreatedBy("DUMMY_USER");
+		user.setCreatedBy(getPrincipal());
 		user.setModifiedAt(_date);
-		user.setModifiedBy("DUMMY_USER");
+		user.setModifiedBy(getPrincipal());
 		index.put(_id, user);
 		logger.info("create() -> " + PrettyPrinter.prettyPrintAsJSON(user));		
 		if (isPersistent) {
@@ -169,7 +169,7 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 		_um.setHashedPassword(user.getHashedPassword());
 		_um.setSalt(user.getSalt());
 		_um.setModifiedAt(new Date());
-		_um.setModifiedBy("DUMMY_USER");
+		_um.setModifiedBy(getPrincipal());
 		index.put(id, _um);
 		logger.info("update(" + PrettyPrinter.prettyPrintAsJSON(_um) + ")");
 		if (isPersistent) {
