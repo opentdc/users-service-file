@@ -40,6 +40,7 @@ import org.opentdc.service.exception.DuplicateException;
 import org.opentdc.service.exception.InternalServerErrorException;
 import org.opentdc.service.exception.NotFoundException;
 import org.opentdc.service.exception.ValidationException;
+import org.opentdc.users.AuthType;
 import org.opentdc.users.ServiceProvider;
 import org.opentdc.users.UserModel;
 import org.opentdc.util.PrettyPrinter;
@@ -110,13 +111,10 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 			throw new ValidationException("user <" + user.getId() +
 					"> must have a valid contactId.");
 		}
-		if (user.getHashedPassword() == null || user.getHashedPassword().length() == 0) {
-			throw new ValidationException("user <" + user.getId() +
-					"> must have a valid hashedPassword.");
-		}
-		if (user.getSalt() == null || user.getSalt().length() == 0) {
-			throw new ValidationException("user <" + user.getId() +
-					"> must have a valid salt.");
+		// check that the referenced contact exists
+		org.opentdc.addressbooks.file.FileServiceProvider.getContactModel(user.getContactId());
+		if (user.getAuthType() == null) {
+			user.setAuthType(AuthType.getDefault());
 		}
 		user.setId(_id);
 		Date _date = new Date();
@@ -151,31 +149,44 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 		UserModel user
 	) throws NotFoundException, ValidationException
 	{
-		UserModel _um = index.get(id);
-		if (_um == null) {
+		UserModel _userModel = index.get(id);
+		if (_userModel == null) {
 			throw new NotFoundException("no user with ID <" + id
 					+ "> was found.");
 		} 
-		if (! _um.getCreatedAt().equals(user.getCreatedAt())) {
+		if (! _userModel.getCreatedAt().equals(user.getCreatedAt())) {
 			logger.warning("user <" + id + ">: ignoring createdAt value <" + user.getCreatedAt().toString() +
 					"> because it was set on the client.");
 		}
-		if (! _um.getCreatedBy().equalsIgnoreCase(user.getCreatedBy())) {
+		if (! _userModel.getCreatedBy().equalsIgnoreCase(user.getCreatedBy())) {
 			logger.warning("user <" + id + ">: ignoring createdBy value <" + user.getCreatedBy() +
 					"> because it was set on the client.");		
 		}
-		_um.setLoginId(user.getLoginId());
-		_um.setContactId(user.getContactId());
-		_um.setHashedPassword(user.getHashedPassword());
-		_um.setSalt(user.getSalt());
-		_um.setModifiedAt(new Date());
-		_um.setModifiedBy(getPrincipal());
-		index.put(id, _um);
-		logger.info("update(" + PrettyPrinter.prettyPrintAsJSON(_um) + ")");
+		if (user.getLoginId() == null || user.getLoginId().length() == 0) {
+			throw new ValidationException("updating user <" + id + ">: new data must have a valid loginId.");
+		}
+		if (user.getContactId() == null || user.getContactId().length() == 0) {
+			throw new ValidationException("updating user <" + user.getId() + ">: new data must have a valid contactId.");
+		}
+		// check that the referenced contact exists
+		org.opentdc.addressbooks.file.FileServiceProvider.getContactModel(user.getContactId());
+		_userModel.setLoginId(user.getLoginId());
+		_userModel.setContactId(user.getContactId());
+		_userModel.setHashedPassword(user.getHashedPassword());
+		_userModel.setSalt(user.getSalt());
+		if (user.getAuthType() == null) {
+			_userModel.setAuthType(AuthType.getDefault());
+		} else {
+			_userModel.setAuthType(user.getAuthType());
+		}
+		_userModel.setModifiedAt(new Date());
+		_userModel.setModifiedBy(getPrincipal());
+		index.put(id, _userModel);
+		logger.info("update(" + PrettyPrinter.prettyPrintAsJSON(_userModel) + ")");
 		if (isPersistent) {
 			exportJson(index.values());
 		}
-		return _um;
+		return _userModel;
 	}
 
 	@Override
