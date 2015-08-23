@@ -43,6 +43,7 @@ import org.opentdc.service.exception.ValidationException;
 import org.opentdc.users.AuthType;
 import org.opentdc.users.ServiceProvider;
 import org.opentdc.users.UserModel;
+import org.opentdc.users.UserQueryHandler;
 import org.opentdc.util.PrettyPrinter;
 
 public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> implements ServiceProvider {
@@ -72,12 +73,16 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 		long position,
 		long size
 	) {
-		ArrayList<UserModel> _users = new ArrayList<UserModel>(index.values());
-		Collections.sort(_users, UserModel.UserComparator);
+		ArrayList<UserModel> _list = new ArrayList<UserModel>(index.values());
+		Collections.sort(_list, UserModel.UserComparator);
+		UserQueryHandler _queryHandler = new UserQueryHandler(query);
+
 		ArrayList<UserModel> _selection = new ArrayList<UserModel>();
-		for (int i = 0; i < _users.size(); i++) {
+		for (int i = 0; i < _list.size(); i++) {
 			if (i >= position && i < (position + size)) {
-				_selection.add(_users.get(i));
+				if (_queryHandler.evaluate(_list.get(i)) == true) {
+					_selection.add(_list.get(i));
+				}
 			}			
 		}
 		logger.info("list(<" + query + ">, <" + queryType + 
