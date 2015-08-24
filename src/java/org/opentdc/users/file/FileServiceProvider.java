@@ -34,8 +34,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
 
 import org.opentdc.file.AbstractFileServiceProvider;
+import org.opentdc.service.ServiceUtil;
 import org.opentdc.service.exception.DuplicateException;
 import org.opentdc.service.exception.InternalServerErrorException;
 import org.opentdc.service.exception.NotFoundException;
@@ -92,6 +94,7 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 
 	@Override
 	public UserModel create(
+		HttpServletRequest request,
 		UserModel user
 	) throws DuplicateException, ValidationException {
 		logger.info("create(" + PrettyPrinter.prettyPrintAsJSON(user) + ")");
@@ -124,9 +127,9 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 		user.setId(_id);
 		Date _date = new Date();
 		user.setCreatedAt(_date);
-		user.setCreatedBy(getPrincipal());
+		user.setCreatedBy(ServiceUtil.getPrincipal(request));
 		user.setModifiedAt(_date);
-		user.setModifiedBy(getPrincipal());
+		user.setModifiedBy(ServiceUtil.getPrincipal(request));
 		index.put(_id, user);
 		logger.info("create() -> " + PrettyPrinter.prettyPrintAsJSON(user));		
 		if (isPersistent) {
@@ -150,6 +153,7 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 
 	@Override
 	public UserModel update(
+		HttpServletRequest request,
 		String id,
 		UserModel user
 	) throws NotFoundException, ValidationException
@@ -185,7 +189,7 @@ public class FileServiceProvider extends AbstractFileServiceProvider<UserModel> 
 			_userModel.setAuthType(user.getAuthType());
 		}
 		_userModel.setModifiedAt(new Date());
-		_userModel.setModifiedBy(getPrincipal());
+		_userModel.setModifiedBy(ServiceUtil.getPrincipal(request));
 		index.put(id, _userModel);
 		logger.info("update(" + PrettyPrinter.prettyPrintAsJSON(_userModel) + ")");
 		if (isPersistent) {
